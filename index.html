@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF 워드클라우드 생성기 | 안전한 로컬 브라우저 분석</title>
+  <meta name="description" content="PDF 파일을 로컬 브라우저 메모리에서 안전하게 분석하여 아름다운 단어 구름(Word Cloud)을 시각화합니다. 외부 서버 전송이 없습니다.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- PDF.js & Wordcloud2.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg-glow-container">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <header class="app-header">
+    <div class="logo-group">
+      <div class="logo-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      </div>
+      <div>
+        <h1 class="app-title">PDF WordCloud Studio</h1>
+        <p class="app-subtitle">100% 로컬 클라이언트 보안 처리 (데이터 외부 전송 없음)</p>
+      </div>
+    </div>
+    <div class="badge-secure">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+      <span>Local Memory Only</span>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- 왼쪽/상단 컨트롤 & 업로드 영역 -->
+    <aside class="control-panel">
+      <!-- 업로드 드롭존 -->
+      <section class="card upload-card">
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="pdfFileInput" accept="application/pdf" hidden>
+          <div class="upload-icon-wrapper">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <h2 class="upload-title">PDF 파일 선택 또는 드래그</h2>
+          <p class="upload-desc">클릭하여 PDF 파일을 선택하거나 파일 영역으로 드롭하세요</p>
+          <button type="button" class="btn btn-primary" id="selectFileBtn">파일 찾아보기</button>
+        </div>
+
+        <div id="fileInfoArea" class="file-info-area hidden">
+          <div class="file-meta">
+            <div class="file-icon">📄</div>
+            <div class="file-details">
+              <p class="file-name" id="currentFileName">document.pdf</p>
+              <p class="file-size" id="currentFileSize">0 KB</p>
+            </div>
+            <button id="resetFileBtn" class="btn-icon" title="파일 변경">✕</button>
+          </div>
+          <div id="progressContainer" class="progress-container hidden">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+            <div class="progress-status" id="progressStatus">텍스트 추출 중...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 시각화 및 분석 옵션 -->
+      <section class="card settings-card">
+        <h2 class="section-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          커스텀 설정
+        </h2>
+
+        <div class="form-group">
+          <label for="colorTheme">컬러 팔레트</label>
+          <select id="colorTheme" class="custom-select">
+            <option value="aurora">오로라 네온 (기본)</option>
+            <option value="cyberpunk">사이버펑크 바이올렛</option>
+            <option value="ocean">오션 블루 & 틸</option>
+            <option value="sunset">선셋 오렌지 & 핑크</option>
+            <option value="emerald">에메랄드 포레스트</option>
+            <option value="mono">모노크롬 흑백</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="shapeType">모양 (Shape)</label>
+          <select id="shapeType" class="custom-select">
+            <option value="circle">원형 (Circle)</option>
+            <option value="square">사각형 (Square)</option>
+            <option value="cardioid">하트형 (Cardioid)</option>
+            <option value="diamond">다이아몬드 (Diamond)</option>
+            <option value="triangle">삼각형 (Triangle)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="minWordLength">최소 단어 길이: <span id="minWordLengthVal" class="val-tag">2글자</span></label>
+            <input type="range" id="minWordLength" min="1" max="6" value="2" class="range-slider">
+          </div>
+          <div class="form-group">
+            <label for="maxWords">최대 단어 수: <span id="maxWordsVal" class="val-tag">120개</span></label>
+            <input type="range" id="maxWords" min="30" max="300" step="10" value="120" class="range-slider">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rotationRatio">단어 회전율: <span id="rotationRatioVal" class="val-tag">30%</span></label>
+            <input type="range" id="rotationRatio" min="0" max="100" step="5" value="30" class="range-slider">
+          </div>
+          <div class="form-group">
+            <label for="fontFamily">폰트</label>
+            <select id="fontFamily" class="custom-select">
+              <option value="'Pretendard', sans-serif">Pretendard (한글 최적화)</option>
+              <option value="'Outfit', sans-serif">Outfit (영문 현대적)</option>
+              <option value="'Impact', sans-serif">Impact (굵고 강렬함)</option>
+              <option value="'Georgia', serif">Georgia (클래식 세리프)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="stopWordsInput">불용어(제외할 단어) 설정 <span class="subtext">쉼표(,)로 구분</span></label>
+          <textarea id="stopWordsInput" class="custom-textarea" rows="2" placeholder="이, 그, 저, 있다, 하였습니다, the, and..."></textarea>
+        </div>
+
+        <div class="button-action-group">
+          <button id="renderBtn" class="btn btn-action" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            워드클라우드 다시 그리기
+          </button>
+        </div>
+      </section>
+
+      <!-- 통계 서머리 -->
+      <section class="card stats-card" id="statsCard">
+        <h2 class="section-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          문서 분석 통계
+        </h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="statTotalPages">-</div>
+            <div class="stat-label">총 페이지</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statTotalWords">-</div>
+            <div class="stat-label">총 단어 수</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statUniqueWords">-</div>
+            <div class="stat-label">고유 단어 수</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statCloudWords">-</div>
+            <div class="stat-label">표시된 단어</div>
+          </div>
+        </div>
+
+        <div class="top-words-wrapper">
+          <h3 class="subsection-title">가장 많이 등장한 단어 Top 10</h3>
+          <ul class="top-words-list" id="topWordsList">
+            <li class="placeholder-text">PDF를 업로드하면 순위가 나타납니다.</li>
+          </ul>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 오른쪽 워드클라우드 뷰어 영역 -->
+    <section class="display-area">
+      <div class="display-header">
+        <div class="active-badge" id="renderingBadge">
+          <span class="pulse-dot"></span>
+          <span id="renderingStatusText">대기 중</span>
+        </div>
+        <div class="export-actions">
+          <button id="downloadPngBtn" class="btn btn-secondary" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            PNG 이미지 다운로드
+          </button>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-illustration">
+            <svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <circle cx="10" cy="14" r="2"></circle>
+              <line x1="14" y1="18" x2="18" y2="18"></line>
+              <line x1="6" y1="18" x2="8" y2="18"></line>
+            </svg>
+          </div>
+          <h3>PDF 문서를 업로드해 주세요</h3>
+          <p>왼쪽 패널에 PDF 문서를 업로드하면 브라우저 메모리 안에서 단어를 분석해 즉각적으로 워드클라우드를 생성합니다.</p>
+        </div>
+
+        <canvas id="wordCloudCanvas" class="wordcloud-canvas hidden"></canvas>
+        <div id="wordTooltip" class="word-tooltip hidden"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>보안 안내: 본 웹 애플리케이션은 사용자의 브라우저 내 HTML5 File API 및 Web Worker/메모리에서 모든 PDF 추출과 렌더링 작업을 수행합니다. 어떠한 데이터도 외부 서버로 전송되지 않습니다.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
